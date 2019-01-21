@@ -32,3 +32,17 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
          solver
          args))
 
+(defmethod initialize-instance ((i maxsat-instance) &rest args &key (converter #'to-cnf-tseytin) soft-clauses &allow-other-keys)
+  (remf args :soft-clauses)
+  (apply #'call-next-method i
+         :soft-clauses
+         (mappend (lambda-ematch
+                    ((list w form)
+                     (ematch (to-cnf form converter)
+                       ((or (list* 'and clauses)
+                            (<> clauses (list cnf) cnf))
+                        (mapcar (lambda (clause)
+                                  (list w clause))
+                                clauses)))))
+                  soft-clauses)
+         args))
