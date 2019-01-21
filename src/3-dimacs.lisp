@@ -48,7 +48,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun print-wcnf (instance &optional (stream *standard-output*) (*verbosity* *verbosity*))
   (ematch instance
-    ((wsat-instance cnf soft-clauses variables)
+    ((maxsat-instance (cl-sat::cnf cnf) soft-clauses variables)
      (when (<= 1 *verbosity*)
        (pprint-logical-block (stream nil :per-line-prefix "c ")
          (when (<= 2 *verbosity*)
@@ -77,7 +77,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                   ((or (list* 'or terms)
                        (<> terms (list c)))
                    (when (<= 3 *verbosity*)
-                     (format stream "~&c Hard: ~a" c))
+                     (format stream "~&c Hard clause: ~a" c))
                    (format stream "~&~a ~{~a ~}0"
                            top
                            (iter (for term in terms)
@@ -90,9 +90,12 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
           (iter (for c in soft-clauses)
                 (ematch c
-                  ((list (and w (number)) (list* 'or terms))
+                  ((list (and w (number))
+                         (and disjunction
+                              (or (list* 'or terms)
+                                  (<> terms (list atom) atom))))
                    (when (<= 3 *verbosity*)
-                     (format stream "~&c Soft clause: w=~a, ~a" w c))
+                     (format stream "~&c Soft clause: w=~a, ~a" w disjunction))
                    (format stream "~&~a ~{~a ~}0"
                            w
                            (iter (for term in terms)
@@ -107,9 +110,10 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 (defun parse-wdimacs-output (file instance)
   (iter (for line in-file file using #'read-line)
 
+        (with cost = nil)
         (with sure = nil)
         (with satisfiable = nil)
-        (with assignments = (make-array (length (sat-instance-variables instance))
+        (with assignments = (make-array (length (variables instance))
                                         :element-type '(integer 0 2)
                                         :initial-element 2))
 
@@ -140,7 +144,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
         (finally
          (iter (for a in-vector assignments with-index i)
-               (for v = (aref (sat-instance-variables instance) i))
+               (for v = (aref (variables instance) i))
                (case a
                  (1 (when (not (eq (find-package :cl-maxsat.aux-variables)
                                    (symbol-package v)))
@@ -149,6 +153,6 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                    (symbol-package v)))
                       (collect v into dont-care))))
                (finally
-                (return-from parse-true-wdimacs-output
-                  (values trues satisfiable sure dont-care)))))))
+                (return-from parse-wdimacs-output
+                  (values trues satisfiable sure dont-care cost)))))))
 

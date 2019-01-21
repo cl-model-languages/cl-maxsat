@@ -36,7 +36,8 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (test print-wcnf
   (fresh-line)
-  (finishes (print-cnf (make-instance 'maxsat-instance :form '(and a b c) :soft-clauses '((5 (or !a !c)) (3 (or !a !b)) (2 (or !b !c)))))))
+  (let ((*verbosity* 3))
+    (finishes (print-wcnf (make-instance 'maxsat-instance :form '(and a b c) :soft-clauses '((5 (or !a !c)) (3 (or !a !b)) (2 (or !b !c))))))))
 
 
 
