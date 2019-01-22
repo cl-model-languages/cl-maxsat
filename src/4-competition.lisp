@@ -43,71 +43,189 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 (define-condition build-error (competition-setup-error) ())
 (define-condition chmod-error (competition-setup-error) ())
 
-(defun download-solver (year track name)
+(defun cmd (command &rest format-args)
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output *standard-output*
+                    :error-output *error-output*))
+
+(defun cmd* (command &rest format-args)
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output *standard-output*
+                    :error-output *error-output*
+                    :ignore-error-status t))
+
+(defun rel (directory)
+  (asdf:system-relative-pathname :cl-maxsat directory))
+
+(defmethod solve ((input pathname) (competition (eql :maxsat-competition)) &rest options &key debug year track name &allow-other-keys)
+  (remf options :debug)
+  (with-temp (dir :directory t :template "maxsat.XXXXXXXX" :debug debug)
+    (let ((result (format nil "~a/result" dir)))
+      ;; exit value seem to be now ignored in MaxSAT competition
+      (download-and-run-solver year track name input dir result)
+      (parse-wdimacs-output result *instance*))))
+
+
+(defgeneric download-and-run-solver (year track name input dir result)
+  (:documentation "Returns function"))
+
+;; LMHS requires CPLEX
+#+(or)
+(defmethod download-and-run-solver ((year (eql 2017))
+                                    (track (eql :complete))
+                                    (name  (eql :lmhs))
+                                    input dir result)
+  (download-and-extract 2017 "complete" "LMHS")
+  ;; build
+  (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+    (unless (prove-file "")
+      (handler-case
+          (progn
+            (simple-style-warning "This requires CPLEX")
+            (cmd "cd ~a && make"))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+
+    (cmd "" input dir result)))
+
+;; MaxHS requires CPLEX
+#+(or)
+(defmethod download-and-run-solver ((year (eql 2017))
+                                    (track (eql :complete))
+                                    (name  (eql :lmhs))
+                                    input dir result)
+  (download-and-extract 2017 "complete" "MaxHS")
+  ;; build
+  (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+    (unless (prove-file "")
+      (handler-case
+          (progn
+            (simple-style-warning "This requires CPLEX")
+            (cmd "cd ~a && make"))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+
+    (cmd "" input dir result)))
+
+;; couldnt make it work
+#+(or)
+(defmethod download-and-run-solver ((year (eql 2017))
+                                    (track (eql :complete))
+                                    (name  (eql :loandra))
+                                    input dir result)
+  (download-and-extract 2017 "complete" "Loandra")
+  ;; build
+  (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+    (unless (probe-file "")
+      (handler-case
+          (progn
+            (cmd "cd ~a && make rs"))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd "" input dir result)))
+
+
+;; MSUSorting builds fine, but the output format is incorrect --- variable assignments are in the "s" line, not "v" line
+#+(or)
+(defmethod download-and-run-solver ((year (eql 2017))
+                                    (track (eql :complete))
+                                    (name  (eql :msusorting))
+                                    input dir result)
+  (let ((track "complete")
+        (name "MSUSorting"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/sortingmaxsat" year track name)))
+      (handler-case
+          (progn
+            (cmd "make -C ~a"    (rel (format nil "solvers/~a/~a/~a/code/depend"         year track name)))
+            (cmd "rm ~a || true" (rel (format nil "solvers/~a/~a/~a/code/CMakeCache.txt" year track name)))
+            (cmd "cd ~a ; cmake ."      (rel (format nil "solvers/~a/~a/~a/code/"               year track name)))
+            (cmd "make -C ~a"    (rel (format nil "solvers/~a/~a/~a/code/"               year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a -f ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/sortingmaxsat" year track name)) input result)))
+
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :open-wbo))
+                                    input dir result)
+  (let ((track "complete")
+        (name "Open-WBO"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/open-wbo" year track name)))
+      (handler-case
+          (progn
+            (cmd "sed -i 's/-Wall -Wno-parentheses//g' ~a"
+                 (rel (format nil "solvers/~a/~a/~a/code/Makefile"         year track name)))
+            (cmd "cd ~a ; make "    (rel (format nil "solvers/~a/~a/~a/code/"         year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/open-wbo" year track name)) input result)))
+
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :maxino))
+                                    input dir result)
+  (let ((track "complete")
+        (name "maxino"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/build/release/maxino" year track name)))
+      (handler-case
+          (progn
+            (cmd "make -C ~a all static lib"    (rel (format nil "solvers/~a/~a/~a/code/" year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/build/release/maxino" year track name)) input result)))
+
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :qmaxsat))
+                                    input dir result)
+  (let ((track "complete")
+        (name "QMaxSAT"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/qmaxsat1703_g3" year track name)))
+      (handler-case
+          (progn
+            (cmd "cd ~a ; make"    (rel (format nil "solvers/~a/~a/~a/code/" year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/qmaxsat1703_g3" year track name)) input result)))
+
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :qmaxsatuc))
+                                    input dir result)
+  (let ((track "complete")
+        (name "QMaxSATuc"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/qmaxsat1706UC_g3" year track name)))
+      (handler-case
+          (progn
+            (cmd "cd ~a ; make"    (rel (format nil "solvers/~a/~a/~a/code/" year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/qmaxsat1706UC_g3" year track name)) input result)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun download-and-extract (year track name)
   (check-type year fixnum)
   (let* ((dir (namestring (asdf:system-relative-pathname :cl-maxsat (format nil "solvers/~a/~a/" year track))))
          (zip (namestring (merge-pathnames (format nil "~a.zip" name) dir)))
-         (runner (merge-pathnames (format nil "~a/bin/starexec_run_default" name) dir))
-         (bin (namestring (merge-pathnames (format nil "~a/bin/" name) dir)))
-         (code (namestring (merge-pathnames (format nil "~a/code/" name) dir)))
          (home (namestring (merge-pathnames (format nil "~a/" name) dir))))
     (ensure-directories-exist zip)
-    (unless (probe-file runner)
+    (unless (probe-file zip)
       (alexandria:unwind-protect-case ()
           (progn
             (handler-case
-                (uiop:run-program `("wget" ,(format nil "~a/~a/~a.zip" (cdr (assoc year *base-url*)) track name) "-O" ,zip)
-                                  :output t :error t)
+                (cmd "wget ~a/~a/~a.zip -O ~a" (cdr (assoc year *base-url*)) track name zip)
               (uiop:subprocess-error ()
                 (error 'download-error :year year :track track :name name)))
             (handler-case
-                (uiop:run-program `("sh" "-c" ,(format nil "cd ~a; unzip ~a.zip" dir name))
-                                  :output t :error t)
+                (cmd "cd ~a; unzip ~a.zip" dir name)
               (uiop:subprocess-error ()
-                (error 'unzip-error :year year :track track :name name)))
-            (handler-case
-                (uiop:run-program `("sh" "-c" ,(format nil "cd ~a; make static ; make ; chmod +x *" code))
-                                  :output t :error t)
-              (uiop:subprocess-error ()
-                (error 'build-error :year year :track track :name name))))
+                (error 'unzip-error :year year :track track :name name))))
         (:abort
          (format *error-output* "~&Aborting, cleaning up~%")
-         (uiop:run-program `("rm" "-rv" ,zip ,home)
-                           :output t :error t :ignore-error-status t))))
-    (unless (probe-file runner)
-      (error "Runner script ~a is missing in ~a !" runner bin))
-    ;; (handler-case
-    ;;     (uiop:run-program `("sh" "-c" ,(format nil "chmod +x ~a/*" bin))
-    ;;                       :output t :error-output t)
-    ;;   (uiop:subprocess-error ()
-    ;;     (error 'chmod-error :year year :track track :name name)))
-    (values (namestring (first (directory runner))) code)))
+         (cmd "rm -rv ~a ~a" zip home))))))
 
-(defmethod solve ((input pathname) (competition (eql :maxsat-competition)) &rest options &key debug year track name (timelimit 1800) &allow-other-keys)
-  (remf options :debug)
-  (remf options :solver)
-  (with-temp (gz :template "wcnf-XXXXXXXX.gz" :debug debug)
-    (uiop:run-program (format nil "gzip -c ~a > ~a" input gz))
-    (with-temp (dir :directory t :template "glucose.XXXXXXXX" :debug debug)
-      (multiple-value-bind (runner bin) (download-solver year track name)
-        (let* ((command (format nil "cd ~a ; STAREXEC_WALLCLOCK_LIMIT=~a bash ~a ~a ~a"
-                                bin
-                                timelimit
-                                runner
-                                (namestring gz)
-                                (namestring dir)))
-               (result (format nil "~a/result" dir)))
-          (format t "~&; ~a" command)
-          (multiple-value-match (uiop:run-program command
-                                                  :output result
-                                                  :error-output t
-                                                  :ignore-error-status t)
-            ((_ _ 0)
-             ;; indeterminite
-             (values nil nil nil))
-            ((_ _ 10)
-             ;; sat
-             (parse-wdimacs-output result *instance*))
-            ((_ _ 20)
-             ;; unsat
-             (values nil nil t))))))))
+

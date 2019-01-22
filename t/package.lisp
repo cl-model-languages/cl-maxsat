@@ -41,39 +41,58 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun runner (year track name)
   (print
-   (ignore-errors
-     (multiple-value-list
-      (solve '(and (or a b) (or a !b c)) :maxsat-competition
-             :soft-clauses '((3 (or b c)))
-             :year year :track track :name name)))))
+   (multiple-value-list
+    (solve '(and (or a b) (or a !b c)) :maxsat-competition
+           :soft-clauses '((3 (or b c)))
+           :debug t
+           :year year :track track :name name))))
 
-(test competition
 
-  ;; (is-true
-  ;;   (runner 2017 "complete" "LMHS"))
-  ;; (is-true
-  ;;   (runner 2017 "complete" "MaxHS"))
-  ;; (is-true
-  ;;   (runner 2017 "complete" "Loandra"))
-  ;; (is-true
-  ;;   (runner 2017 "complete" "MSUSorting"))
+;; (test LMHS
+;;   (is-true
+;;     (runner 2017 "complete" "LMHS")))
+;; 
+;; (test MaxHS
+;;   (is-true
+;;    (runner 2017 "complete" "MaxHS")))
+;; 
+;; (test Loandra
+;;   (is-true
+;;    (runner 2017 "complete" "Loandra")))
+;;   
+;; (test MSUsorting
+;;   (is-true
+;;     (runner 2017 :complete :msusorting)))
+
+(test Open-WBO
   (is-true
-    (runner 2017 "complete" "maxino"))
+   (runner 2017 :complete :Open-WBO)))
+
+(test maxino
   (is-true
-    (runner 2017 "complete" "Open-WBO"))
-  (is-true
-    (runner 2017 "complete" "QMaxSAT"))
-  (is-true
-    (runner 2017 "complete" "QMaxSATuc"))
-  ;; (is-true
-  ;;   (runner 2017 "incomplete" "LMHS-inc"))
-  ;; (is-true
-  ;;   (runner 2017 "incomplete" "MaxHS-inc"))
-  ;; (is-true
-  ;;   (runner 2017 "incomplete" "Open-WBO-LSU"))
-  ;; (is-true
-  ;;   (runner 2017 "incomplete" "maxroster"))
-  )
+   (runner 2017 :complete :maxino)))
 
 
+(test QMaxSAT
+  (is-true
+   (runner 2017 :complete :QMaxSAT)))
 
+(test QMaxSATuc
+  (is-true
+   (runner 2017 :complete :QMaxSATuc)))
+
+;; (test LMHS-inc
+;;   (is-true
+;;    (runner 2017 :incomplete "LMHS-inc")))
+;; 
+;; (test MaxHS-inc
+;;   (is-true
+;;    (runner 2017 :incomplete "MaxHS-inc")))
+;; 
+;; (test Open-WBO-LSU
+;;   (is-true
+;;    (runner 2017 :incomplete "Open-WBO-LSU")))
+;; 
+;; (test maxroster
+;;   (is-true
+;;    (runner 2017 :incomplete "maxroster")))
