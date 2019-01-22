@@ -205,6 +205,38 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
     (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/qmaxsat1706UC_g3" year track name)) input result)))
 
 
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :incomplete)) (name  (eql :open-wbo-LSU))
+                                    input dir result)
+  (let ((track "incomplete")
+        (name "Open-WBO-LSU"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/code/open-wbo" year track name)))
+      (handler-case
+          (progn
+            (cmd "sed -i 's/-Wall -Wno-parentheses//g' ~a"
+                 (rel (format nil "solvers/~a/~a/~a/code/Makefile"         year track name)))
+            (cmd "cd ~a ; make "    (rel (format nil "solvers/~a/~a/~a/code/"         year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/code/open-wbo" year track name)) input result)))
+
+;; somehow the results contain undeclared variables; for a problem with 6 variables, it returns a solution with 10 variables
+#+(or)
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :incomplete)) (name  (eql :maxroster))
+                                    input dir result)
+  (let ((track "incomplete")
+        (name "maxroster"))
+    (download-and-extract 2017 track name)
+    ;; build
+    (unless (probe-file (rel (format nil "solvers/~a/~a/~a/bin/maxroster" year track name)))
+      (handler-case
+          (progn
+            (cmd "cd ~a ; make "    (rel (format nil "solvers/~a/~a/~a/code/linux/"         year track name))))
+        (uiop:subprocess-error ()
+          (error 'build-error :year year :track track :name name))))
+    (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/bin/maxroster" year track name)) input result)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun download-and-extract (year track name)
