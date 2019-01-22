@@ -47,8 +47,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
   (check-type year fixnum)
   (let* ((dir (namestring (asdf:system-relative-pathname :cl-maxsat (format nil "solvers/~a/~a/" year track))))
          (zip (namestring (merge-pathnames (format nil "~a.zip" name) dir)))
-         (runner (namestring (merge-pathnames (format nil "~a/bin/starexec_run_default" name) dir)))
+         (runner (merge-pathnames (format nil "~a/bin/starexec_run_default" name) dir))
          (bin (namestring (merge-pathnames (format nil "~a/bin/" name) dir)))
+         (code (namestring (merge-pathnames (format nil "~a/code/" name) dir)))
          (home (namestring (merge-pathnames (format nil "~a/" name) dir))))
     (ensure-directories-exist zip)
     (unless (probe-file runner)
@@ -63,9 +64,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                 (uiop:run-program `("sh" "-c" ,(format nil "cd ~a; unzip ~a.zip" dir name))
                                   :output t :error t)
               (uiop:subprocess-error ()
-                (error 'unzip-error :year year :track track :name name))) 
+                (error 'unzip-error :year year :track track :name name)))
             (handler-case
-                (uiop:run-program `("sh" "-c" ,(format nil "cd ~a; chmod +x starexec_build build/*; MAKEFLAGS=\"-j 4\" ./starexec_build" home))
+                (uiop:run-program `("sh" "-c" ,(format nil "cd ~a; make static ; make ; chmod +x *" code))
                                   :output t :error t)
               (uiop:subprocess-error ()
                 (error 'build-error :year year :track track :name name))))
@@ -75,36 +76,38 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                            :output t :error t :ignore-error-status t))))
     (unless (probe-file runner)
       (error "Runner script ~a is missing in ~a !" runner bin))
-    (handler-case
-        (uiop:run-program `("sh" "-c" ,(format nil "chmod +x ~a/*" bin))
-                          :output t :error-output t)
-      (uiop:subprocess-error ()
-        (error 'chmod-error :year year :track track :name name)))
-    (values runner bin)))
+    ;; (handler-case
+    ;;     (uiop:run-program `("sh" "-c" ,(format nil "chmod +x ~a/*" bin))
+    ;;                       :output t :error-output t)
+    ;;   (uiop:subprocess-error ()
+    ;;     (error 'chmod-error :year year :track track :name name)))
+    (values (namestring (first (directory runner))) code)))
 
-(defmethod solve ((input pathname) (competition (eql :maxsat-competition)) &rest options &key debug year track name &allow-other-keys)
+(defmethod solve ((input pathname) (competition (eql :maxsat-competition)) &rest options &key debug year track name (timelimit 1800) &allow-other-keys)
   (remf options :debug)
   (remf options :solver)
-  
-  (with-temp (dir :directory t :template "glucose.XXXXXXXX" :debug debug)
-    (multiple-value-bind (runner bin) (download-solver year track name)
-      (let* ((command (format nil "cd ~a ; bash ~a ~a ~a"
-                              bin
-                              runner
-                              (namestring input)
-                              (namestring dir)))
-             (result (format nil "~a/result" dir)))
-        (format t "~&; ~a" command)
-        (multiple-value-match (uiop:run-program command
-                                                :output result
-                                                :error-output t
-                                                :ignore-error-status t)
-          ((_ _ 0)
-           ;; indeterminite
-           (values nil nil nil))
-          ((_ _ 10)
-           ;; sat
-           (parse-wdimacs-output result *instance*))
-          ((_ _ 20)
-           ;; unsat
-           (values nil nil t)))))))
+  (with-temp (gz :template "wcnf-XXXXXXXX.gz" :debug debug)
+    (uiop:run-program (format nil "gzip -c ~a > ~a" input gz))
+    (with-temp (dir :directory t :template "glucose.XXXXXXXX" :debug debug)
+      (multiple-value-bind (runner bin) (download-solver year track name)
+        (let* ((command (format nil "cd ~a ; STAREXEC_WALLCLOCK_LIMIT=~a bash ~a ~a ~a"
+                                bin
+                                timelimit
+                                runner
+                                (namestring gz)
+                                (namestring dir)))
+               (result (format nil "~a/result" dir)))
+          (format t "~&; ~a" command)
+          (multiple-value-match (uiop:run-program command
+                                                  :output result
+                                                  :error-output t
+                                                  :ignore-error-status t)
+            ((_ _ 0)
+             ;; indeterminite
+             (values nil nil nil))
+            ((_ _ 10)
+             ;; sat
+             (parse-wdimacs-output result *instance*))
+            ((_ _ 20)
+             ;; unsat
+             (values nil nil t))))))))
