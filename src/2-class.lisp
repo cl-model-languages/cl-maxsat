@@ -46,3 +46,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                 clauses)))))
                   soft-clauses)
          args))
+
+(defmethod solve ((*instance* maxsat-instance) solver &rest args &key debug &allow-other-keys)
+  (with-temp (tmp :template "wcnf.XXXXXXX" :debug debug)
+    (with-output-to-file (s tmp :if-exists :supersede)
+      (print-wcnf *instance* s))
+    (apply #'solve (pathname tmp) solver args)))
