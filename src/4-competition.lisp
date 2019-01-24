@@ -148,6 +148,32 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
       ;; (cmd "" input dir result)
       )))
 
+;; MaxHS requires CPLEX
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :maxhs))
+                                    input dir result)
+  (let* ((track "complete")
+         (name "MaxHS")
+         (binary (rel (format nil "solvers/~a/~a/~a/code/build/release/bin/maxhs" year track name))))
+    (download-and-extract 2017 track name)
+    ;; build
+    (multiple-value-bind (cplex cplex-dynamic cplex-static cplex-header) (detect-cplex)
+      (declare (ignorable cplex cplex-dynamic cplex-static cplex-header))
+      ;; build
+      (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+        (unless (probe-file binary)
+          (handler-case
+              (progn
+                (cmd "sed -i '/MAXHS_CXXFLAGS += -Wall -Wno-parentheses -Wextra -Wno-deprecated/d' ~a/Makefile" code)
+                (cmd "sed -i '/MAXHS_LDFLAGS  = -Wall -lz -L$(CPLEXLIBDIR) -lcplex -lpthread/a MAXHS_LDFLAGS  += -ldl' ~a/Makefile" code)
+                #+linux
+                (cmd "cd ~a; LINUX_CPLEXLIBDIR=~a LINUX_CPLEXINCDIR=~a make config" code cplex-static cplex-header)
+                #+darwin
+                (cmd "cd ~a; DARWIN_CPLEXLIBDIR=~a DARWIN_CPLEXINCDIR=~a make config" code cplex-static cplex-header)
+                (cmd "cd ~a && make" code))
+            (uiop:subprocess-error ()
+              (error 'build-error :year year :track track :name name))))
+        (cmd "cd ~a ; ~a -no-printOptions -verb=0 ~a > ~a" dir binary input result)))))
+
 ;; couldnt make it work
 #+(or)
 (defmethod download-and-run-solver ((year (eql 2017))
