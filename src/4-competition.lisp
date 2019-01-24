@@ -42,6 +42,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 (define-condition unzip-error (competition-setup-error) ())
 (define-condition build-error (competition-setup-error) ())
 (define-condition chmod-error (competition-setup-error) ())
+(define-condition no-cplex-error (error) ())
 
 (defun cmd (command &rest format-args)
   "returns a status code, signal errors for non-0 return code"
@@ -83,6 +84,25 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defgeneric download-and-run-solver (year track name input dir result)
   (:documentation "Returns function"))
+
+(defun detect-cplex ()
+  (format t "~&; Detecting cplex ('cplex' binary needs to be in PATH)~&")
+  ;; tested for CPLEX 12.8
+  ;; /home/masataro/.local/opt/ibm/ILOG/CPLEX_Studio128/cplex/bin/x86-64_linux/cplex
+  (handler-case
+      (let* ((cplex (cmd/s "readlink -ef $(which cplex)"))
+             (studio (truename (merge-pathnames "../../../" (make-pathname :name nil :defaults cplex))))
+             (platform (cmd/s "basename $(dirname $(readlink -ef $(which cplex)))")) ; -- e.g. x86-64_linux
+             (cplex-dynamic  (cmd/s "dirname $(readlink -ef $(which cplex))"))
+             (cplex-static   (merge-pathnames (format nil "cplex/lib/~a/static_pic" platform) studio))
+             (cplex-header   (merge-pathnames "cplex/include" studio))
+             (concert-static (merge-pathnames (format nil "concert/lib/~a/static_pic" platform) studio))
+             (concert-header (merge-pathnames "concert/include" studio)))
+        (format t "~&; Found! ~a~&" cplex)
+        (values cplex cplex-dynamic cplex-static cplex-header
+                concert-static concert-header))
+    (uiop:subprocess-error ()
+      (error 'no-cplex-error))))
 
 ;; LMHS requires CPLEX
 #+(or)
