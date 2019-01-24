@@ -116,11 +116,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
         (with assignments = (make-array (length (variables instance))
                                         :element-type '(integer 0 2)
                                         :initial-element 2))
-
-        ;; hack for common bugs in glucose-based solvers
-        (when (equal line "WARNING: for repeatability, setting FPU to use double precision")
-          (next-iteration))
-
+        
         (match line
           ((string* #\c _)
            ;; do nothing
