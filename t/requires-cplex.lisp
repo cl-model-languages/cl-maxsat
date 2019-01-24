@@ -42,10 +42,10 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-;; (test LMHS-inc
-;;   (is-true
-;;    (runner 2017 :incomplete :LMHS-inc)))
-;; 
-;; (test MaxHS-inc
-;;   (is-true
-;;    (runner 2017 :incomplete :MaxHS-inc)))
+(test LMHS-inc
+  (is-true
+   (runner 2017 :incomplete :LMHS-inc)))
+
+(test MaxHS-inc
+  (is-true
+   (runner 2017 :incomplete :MaxHS-inc)))

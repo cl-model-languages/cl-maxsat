@@ -291,6 +291,63 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
           (error 'build-error :year year :track track :name name))))
     (cmd* "~a ~a > ~a" (rel (format nil "solvers/~a/~a/~a/bin/maxroster" year track name)) input result)))
 
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :incomplete)) (name  (eql :lmhs-inc))
+                                    input dir result)
+  (let* ((track "incomplete")
+         (name "LMHS-inc")
+         (binary (rel (format nil "solvers/~a/~a/~a/code/bin/LMHS-int" year track name))))
+    (download-and-extract 2017 track name)
+    ;; build
+    (multiple-value-bind (cplex cplex-dynamic cplex-static cplex-header concert-static concert-header) (detect-cplex)
+      (declare (ignorable cplex cplex-dynamic cplex-static cplex-header concert-static concert-header))
+      ;; build
+      (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+        (unless (probe-file binary)
+          (handler-case
+              (progn
+                (cmd "sed -i '/-pedantic -Wall -Wextra -W -Wpointer-arith -Wcast-align/d' ~a/Makefile" code)
+                (cmd "sed -i '/-Wwrite-strings -Wdisabled-optimization/d                ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wwrite-strings -Wdisabled-optimization/d                ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wctor-dtor-privacy -Wno-reorder -Woverloaded-virtual/d  ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wsign-promo -Wsynth/d                                   ' ~a/Makefile" code)
+                (cmd "sed -i 's/$(MIP_FLAGS) -o $@/$(MIP_FLAGS) -o $@ -ldl/' ~a/Makefile" code)
+                (with-output-to-file (s (merge-pathnames "config.mk" code) :if-does-not-exist :create :if-exists :supersede)
+                  (format s "CPLEXDIR=~a/../~%" cplex-header)
+                  (format s "CPLEXLIBDIR=~a~%" cplex-static)
+                  (format s "CONCERTDIR=~a/../~%" concert-header)
+                  (format s "CONCERTLIBDIR=~a~%" concert-static))
+                (cmd "cd ~a && make" code))
+            (uiop:subprocess-error ()
+              (error 'build-error :year year :track track :name name))))
+        (cmd "cd ~a ; ~a ~a > ~a" dir binary input result)))))
+
+;; MaxHS requires CPLEX
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :incomplete)) (name  (eql :maxhs-inc))
+                                    input dir result)
+  (let* ((track "incomplete")
+         (name "MaxHS-inc")
+         (binary (rel (format nil "solvers/~a/~a/~a/code/build/release/bin/maxhs" year track name))))
+    (download-and-extract 2017 track name)
+    ;; build
+    (multiple-value-bind (cplex cplex-dynamic cplex-static cplex-header) (detect-cplex)
+      (declare (ignorable cplex cplex-dynamic cplex-static cplex-header))
+      ;; build
+      (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+        (unless (probe-file binary)
+          (handler-case
+              (progn
+                (cmd "sed -i '/MAXHS_CXXFLAGS += -Wall -Wno-parentheses -Wextra -Wno-deprecated/d' ~a/Makefile" code)
+                (cmd "sed -i '/MAXHS_LDFLAGS  = -Wall -lz -L$(CPLEXLIBDIR) -lcplex -lpthread/a MAXHS_LDFLAGS  += -ldl' ~a/Makefile" code)
+                #+linux
+                (cmd "cd ~a; LINUX_CPLEXLIBDIR=~a LINUX_CPLEXINCDIR=~a make config" code cplex-static cplex-header)
+                #+darwin
+                (cmd "cd ~a; DARWIN_CPLEXLIBDIR=~a DARWIN_CPLEXINCDIR=~a make config" code cplex-static cplex-header)
+                (cmd "cd ~a && make" code))
+            (uiop:subprocess-error ()
+              (error 'build-error :year year :track track :name name))))
+        (cmd "cd ~a ; ~a -no-printOptions -verb=0 ~a > ~a" dir binary input result)))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun download-and-extract (year track name)
