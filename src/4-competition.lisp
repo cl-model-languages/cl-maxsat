@@ -124,23 +124,29 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
     (cmd "" input dir result)))
 
 ;; MaxHS requires CPLEX
-#+(or)
 (defmethod download-and-run-solver ((year (eql 2017))
                                     (track (eql :complete))
-                                    (name  (eql :lmhs))
+                                    (name  (eql :maxhs))
                                     input dir result)
   (download-and-extract 2017 "complete" "MaxHS")
   ;; build
-  (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
-    (unless (prove-file "")
-      (handler-case
-          (progn
-            (simple-style-warning "This requires CPLEX")
-            (cmd "cd ~a && make"))
-        (uiop:subprocess-error ()
-          (error 'build-error :year year :track track :name name))))
-
-    (cmd "" input dir result)))
+  (multiple-value-bind (cplex bin static header) (detect-cplex)
+    (declare (ignorable cplex bin static header))
+    ;; build
+    (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+      (unless nil
+        ;; (probe-file (rel (format nil "solvers/~a/~a/~a/code/" year track name)))
+        (handler-case
+            (progn
+              #+linux
+              (cmd "cd ~a; LINUX_CPLEXLIBDIR=~a LINUX_CPLEXINCDIR=~a make config" code static header)
+              #+darwin
+              (cmd "cd ~a; DARWIN_CPLEXLIBDIR=~a DARWIN_CPLEXINCDIR=~a make config" code static header)
+              (cmd "cd ~a && make"))
+          (uiop:subprocess-error ()
+            (error 'build-error :year year :track track :name name))))
+      ;; (cmd "" input dir result)
+      )))
 
 ;; couldnt make it work
 #+(or)
