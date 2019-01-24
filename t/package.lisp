@@ -48,17 +48,6 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
            :year year :track track :name name))))
 
 
-;; (test LMHS
-;;   (is-true
-;;     (runner 2017 "complete" "LMHS")))
-;; 
-;; (test MaxHS
-;;   (is-true
-;;    (runner 2017 "complete" "MaxHS")))
-;; 
-;; (test Loandra
-;;   (is-true
-;;    (runner 2017 "complete" "Loandra")))
 ;;   
 ;; (test MSUsorting
 ;;   (is-true
@@ -81,13 +70,6 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
   (is-true
    (runner 2017 :complete :QMaxSATuc)))
 
-;; (test LMHS-inc
-;;   (is-true
-;;    (runner 2017 :incomplete :LMHS-inc)))
-;; 
-;; (test MaxHS-inc
-;;   (is-true
-;;    (runner 2017 :incomplete :MaxHS-inc)))
 
 (test Open-WBO-LSU
   (is-true
