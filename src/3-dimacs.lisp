@@ -121,7 +121,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
         (when (equal line "WARNING: for repeatability, setting FPU to use double precision")
           (next-iteration))
 
-        (ematch line
+        (match line
           ((string* #\c _)
            ;; do nothing
            )
@@ -140,7 +140,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
           ("s UNSATISFIABLE"
            (setf sure t satisfiable nil))
           ("s UNKNOWN"
-           (setf sure nil satisfiable nil)))
+           (setf sure nil satisfiable nil))
+          (_
+           (simple-style-warning "found a garbage line in the output: ~a" line)))
 
         (finally
          (iter (for a in-vector assignments with-index i)
