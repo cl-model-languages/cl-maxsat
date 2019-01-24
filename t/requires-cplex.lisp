@@ -26,10 +26,10 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; these tests are removed from the test suite because they require CPLEX solver
 
-;; (test LMHS
-;;   (is-true
-;;     (runner 2017 "complete" "LMHS")))
-;; 
+(test LMHS
+  (is-true
+    (runner 2017 :complete :LMHS)))
+
 
 (test MaxHS
   (is-true
@@ -38,7 +38,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 ;; 
 ;; (test Loandra
 ;;   (is-true
-;;    (runner 2017 "complete" "Loandra")))
+;;    (runner 2017 :complete :Loandra)))
 
 
 

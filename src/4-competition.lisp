@@ -105,48 +105,35 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
       (error 'no-cplex-error))))
 
 ;; LMHS requires CPLEX
-#+(or)
-(defmethod download-and-run-solver ((year (eql 2017))
-                                    (track (eql :complete))
-                                    (name  (eql :lmhs))
+(defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :lmhs))
                                     input dir result)
-  (download-and-extract 2017 "complete" "LMHS")
-  ;; build
-  (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
-    (unless (prove-file "")
-      (handler-case
-          (progn
-            (simple-style-warning "This requires CPLEX")
-            (cmd "cd ~a && make"))
-        (uiop:subprocess-error ()
-          (error 'build-error :year year :track track :name name))))
-
-    (cmd "" input dir result)))
-
-;; MaxHS requires CPLEX
-(defmethod download-and-run-solver ((year (eql 2017))
-                                    (track (eql :complete))
-                                    (name  (eql :maxhs))
-                                    input dir result)
-  (download-and-extract 2017 "complete" "MaxHS")
-  ;; build
-  (multiple-value-bind (cplex bin static header) (detect-cplex)
-    (declare (ignorable cplex bin static header))
+  (let* ((track "complete")
+         (name "LMHS")
+         (binary (rel (format nil "solvers/~a/~a/~a/code/bin/LMHS-int" year track name))))
+    (download-and-extract 2017 track name)
     ;; build
-    (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
-      (unless nil
-        ;; (probe-file (rel (format nil "solvers/~a/~a/~a/code/" year track name)))
-        (handler-case
-            (progn
-              #+linux
-              (cmd "cd ~a; LINUX_CPLEXLIBDIR=~a LINUX_CPLEXINCDIR=~a make config" code static header)
-              #+darwin
-              (cmd "cd ~a; DARWIN_CPLEXLIBDIR=~a DARWIN_CPLEXINCDIR=~a make config" code static header)
-              (cmd "cd ~a && make"))
-          (uiop:subprocess-error ()
-            (error 'build-error :year year :track track :name name))))
-      ;; (cmd "" input dir result)
-      )))
+    (multiple-value-bind (cplex cplex-dynamic cplex-static cplex-header concert-static concert-header) (detect-cplex)
+      (declare (ignorable cplex cplex-dynamic cplex-static cplex-header concert-static concert-header))
+      ;; build
+      (let* ((code (namestring (rel (format nil "solvers/~a/~a/~a/code/" year track name)))))
+        (unless (probe-file binary)
+          (handler-case
+              (progn
+                (cmd "sed -i '/-pedantic -Wall -Wextra -W -Wpointer-arith -Wcast-align/d' ~a/Makefile" code)
+                (cmd "sed -i '/-Wwrite-strings -Wdisabled-optimization/d                ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wwrite-strings -Wdisabled-optimization/d                ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wctor-dtor-privacy -Wno-reorder -Woverloaded-virtual/d  ' ~a/Makefile" code)
+                (cmd "sed -i '/-Wsign-promo -Wsynth/d                                   ' ~a/Makefile" code)
+                (cmd "sed -i 's/$(MIP_FLAGS) -o $@/$(MIP_FLAGS) -o $@ -ldl/' ~a/Makefile" code)
+                (with-output-to-file (s (merge-pathnames "config.mk" code) :if-does-not-exist :create :if-exists :supersede)
+                  (format s "CPLEXDIR=~a/../~%" cplex-header)
+                  (format s "CPLEXLIBDIR=~a~%" cplex-static)
+                  (format s "CONCERTDIR=~a/../~%" concert-header)
+                  (format s "CONCERTLIBDIR=~a~%" concert-static))
+                (cmd "cd ~a && make" code))
+            (uiop:subprocess-error ()
+              (error 'build-error :year year :track track :name name))))
+        (cmd "cd ~a ; ~a ~a > ~a" dir binary input result)))))
 
 ;; MaxHS requires CPLEX
 (defmethod download-and-run-solver ((year (eql 2017)) (track (eql :complete)) (name  (eql :maxhs))
