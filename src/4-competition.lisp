@@ -44,22 +44,26 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 (define-condition chmod-error (competition-setup-error) ())
 
 (defun cmd (command &rest format-args)
+  "returns a status code, signal errors for non-0 return code"
   (uiop:run-program (apply #'format nil command format-args)
                     :output *standard-output*
                     :error-output *error-output*))
 
 (defun cmd* (command &rest format-args)
+  "returns a status code, ignores error status"
   (uiop:run-program (apply #'format nil command format-args)
                     :output *standard-output*
                     :error-output *error-output*
                     :ignore-error-status t))
 
 (defun cmd/s (command &rest format-args)
+  "returns a string, signal errors for non-0 return code"
   (uiop:run-program (apply #'format nil command format-args)
                     :output '(:string :stripped t)
                     :error-output *error-output*))
 
 (defun cmd*/s (command &rest format-args)
+  "returns a string, ignores error status"
   (uiop:run-program (apply #'format nil command format-args)
                     :output '(:string :stripped t)
                     :error-output *error-output*
