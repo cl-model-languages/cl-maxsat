@@ -54,6 +54,17 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                     :error-output *error-output*
                     :ignore-error-status t))
 
+(defun cmd/s (command &rest format-args)
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output '(:string :stripped t)
+                    :error-output *error-output*))
+
+(defun cmd*/s (command &rest format-args)
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output '(:string :stripped t)
+                    :error-output *error-output*
+                    :ignore-error-status t))
+
 (defun rel (directory)
   (asdf:system-relative-pathname :cl-maxsat directory))
 
