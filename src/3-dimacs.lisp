@@ -84,9 +84,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                  (collect
                                      (ematch term
                                        ((list 'not atom)
-                                        (- (1+ (position atom variables))))
+                                        (- (1+ (or (position atom variables)
+                                                   (error "~a not found in variables:~%~a" atom variables)))))
                                        (atom
-                                        (1+ (position atom variables))))))))))
+                                        (1+ (or (position atom variables)
+                                                (error "~a not found in variables:~%~a" atom variables)))))))))))
 
           (iter (for c in soft-clauses)
                 (ematch c
@@ -102,9 +104,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                  (collect
                                      (ematch term
                                        ((list 'not atom)
-                                        (- (1+ (position atom variables))))
+                                        (- (1+ (or (position atom variables)
+                                                   (error "~a not found in variables:~%~a" atom variables)))))
                                        (atom
-                                        (1+ (position atom variables)))))))))))
+                                        (1+ (or (position atom variables)
+                                                (error "~a not found in variables:~%~a" atom variables))))))))))))
         (fresh-line stream))))))
 
 (defun parse-wdimacs-output (file instance)
