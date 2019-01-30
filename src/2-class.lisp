@@ -52,3 +52,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
     (with-output-to-file (s tmp :if-exists :supersede)
       (print-wcnf *instance* s))
     (apply #'solve (pathname tmp) solver args)))
+
+(defmethod variables ((instance maxsat-instance))
+  (nconc
+   (call-next-method)
+   (remove-duplicates
+    (set-difference
+     (flatten (mapcar #'second (soft-clauses instance)))
+     '(and or not)))))
