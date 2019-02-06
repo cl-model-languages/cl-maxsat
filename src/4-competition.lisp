@@ -51,7 +51,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                 :error-output *error-output*)))
     (unwind-protect
          (uiop:wait-process p)
-      (uiop:terminate-process p))))
+      (iter (while (uiop:process-alive-p p))
+            (uiop:terminate-process p)
+            (sleep 1)))))
 
 (defun cmd* (command &rest format-args)
   "returns a status code, ignores error status"
@@ -61,7 +63,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                 :ignore-error-status t)))
     (unwind-protect
          (uiop:wait-process p)
-      (uiop:terminate-process p))))
+      (iter (while (uiop:process-alive-p p))
+            (uiop:terminate-process p)
+            (sleep 1)))))
 
 (defun cmd/s (command &rest format-args)
   "returns a string, signal errors for non-0 return code"
@@ -73,7 +77,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                    :error-output *error-output*)))
        (unwind-protect
             (uiop:wait-process p)
-         (uiop:terminate-process p))))))
+         (iter (while (uiop:process-alive-p p))
+            (uiop:terminate-process p)
+            (sleep 1)))))))
 
 (defun cmd*/s (command &rest format-args)
   "returns a string, ignores error status"
@@ -86,7 +92,9 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                    :ignore-error-status t)))
        (unwind-protect
             (uiop:wait-process p)
-         (uiop:terminate-process p))))))
+         (iter (while (uiop:process-alive-p p))
+            (uiop:terminate-process p)
+            (sleep 1)))))))
 
 (defun rel (directory)
   (asdf:system-relative-pathname :cl-maxsat directory))
