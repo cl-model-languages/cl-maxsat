@@ -46,29 +46,47 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun cmd (command &rest format-args)
   "returns a status code, signal errors for non-0 return code"
-  (uiop:run-program (apply #'format nil command format-args)
-                    :output *standard-output*
-                    :error-output *error-output*))
+  (let ((p (uiop:launch-program (apply #'format nil command format-args)
+                                :output *standard-output*
+                                :error-output *error-output*)))
+    (unwind-protect
+         (uiop:wait-process p)
+      (uiop:terminate-process p))))
 
 (defun cmd* (command &rest format-args)
   "returns a status code, ignores error status"
-  (uiop:run-program (apply #'format nil command format-args)
-                    :output *standard-output*
-                    :error-output *error-output*
-                    :ignore-error-status t))
+  (let ((p (uiop:launch-program (apply #'format nil command format-args)
+                                :output *standard-output*
+                                :error-output *error-output*
+                                :ignore-error-status t)))
+    (unwind-protect
+         (uiop:wait-process p)
+      (uiop:terminate-process p))))
 
 (defun cmd/s (command &rest format-args)
   "returns a string, signal errors for non-0 return code"
-  (uiop:run-program (apply #'format nil command format-args)
-                    :output '(:string :stripped t)
-                    :error-output *error-output*))
+  (string-trim
+   '(#\Space #\Newline #\Linefeed #\Rubout #\Tab)
+   (with-output-to-string (s)
+     (let ((p (uiop:launch-program (apply #'format nil command format-args)
+                                   :output s
+                                   :error-output *error-output*)))
+       (unwind-protect
+            (uiop:wait-process p)
+         (uiop:terminate-process p))))))
 
 (defun cmd*/s (command &rest format-args)
   "returns a string, ignores error status"
-  (uiop:run-program (apply #'format nil command format-args)
-                    :output '(:string :stripped t)
-                    :error-output *error-output*
-                    :ignore-error-status t))
+  (string-trim
+   '(#\Space #\Newline #\Linefeed #\Rubout #\Tab)
+   (with-output-to-string (s)
+     (let ((p (uiop:launch-program (apply #'format nil command format-args)
+                                   :output s
+                                   :error-output *error-output*
+                                   :ignore-error-status t)))
+       (unwind-protect
+            (uiop:wait-process p)
+         (uiop:terminate-process p))))))
 
 (defun rel (directory)
   (asdf:system-relative-pathname :cl-maxsat directory))
