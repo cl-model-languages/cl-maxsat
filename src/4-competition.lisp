@@ -177,7 +177,12 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
           (handler-case
               (progn
                 (cmd "sed -i '/MAXHS_CXXFLAGS += -Wall -Wno-parentheses -Wextra -Wno-deprecated/d' ~a/Makefile" code)
+                ;; The latest cplex requires being linked against libdl because it uses dlopen
                 (cmd "sed -i '/MAXHS_LDFLAGS  = -Wall -lz -L$(CPLEXLIBDIR) -lcplex -lpthread/a MAXHS_LDFLAGS  += -ldl' ~a/Makefile" code)
+                #+linux
+                (when (/= 0 (cmd "ld -static -lpthread -ldl -lz"))
+                  (warn "Static library for -lpthread -ldl -lz are missing; Trying dynamic build")
+                  (cmd "sed -i 's/--static//g' ~a/Makefile" code))
                 #+linux
                 (cmd "cd ~a; LINUX_CPLEXLIBDIR=~a LINUX_CPLEXINCDIR=~a make config" code cplex-static cplex-header)
                 #+darwin
