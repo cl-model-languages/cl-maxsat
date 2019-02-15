@@ -151,6 +151,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                 (cmd "sed -i '/-Wctor-dtor-privacy -Wno-reorder -Woverloaded-virtual/d  ' ~a/Makefile" code)
                 (cmd "sed -i '/-Wsign-promo -Wsynth/d                                   ' ~a/Makefile" code)
                 (cmd "sed -i 's/$(MIP_FLAGS) -o $@/$(MIP_FLAGS) -o $@ -ldl/' ~a/Makefile" code)
+                ;; override the default configure.py
                 (with-output-to-file (s (merge-pathnames "config.mk" code) :if-does-not-exist :create :if-exists :supersede)
                   (format s "CPLEXDIR=~a/../~%" cplex-header)
                   (format s "CPLEXLIBDIR=~a~%" cplex-static)
