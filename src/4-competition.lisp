@@ -97,7 +97,14 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
             (sleep 1)))))))
 
 (defun rel (directory)
-  (asdf:system-relative-pathname :cl-maxsat directory))
+  ;; When several processes run in parallel, a hook inserted by quicklisp has a
+  ;; problem related to deleteing a temporary file (system-index.txt.bak).
+  #+(or)
+  (asdf:system-relative-pathname :cl-maxsat directory)
+  (merge-pathnames
+   directory
+   (load-time-value
+    (asdf:system-source-directory :cl-maxsat))))
 
 (defmethod solve ((input pathname) (competition (eql :maxsat-competition)) &rest options &key debug year track name &allow-other-keys)
   (remf options :debug)
