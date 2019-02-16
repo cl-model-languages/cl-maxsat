@@ -68,41 +68,19 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
             (sleep 1)))))
 
 (defun cmd/s (command &rest format-args)
-  "returns a string, signal errors for non-0 return code"
-  (string-trim
-   '(#\Space #\Newline #\Linefeed #\Rubout #\Tab)
-   (with-output-to-string (s)
-     (let ((p (uiop:launch-program (apply #'format nil command format-args)
-                                   :output s
-                                   :error-output *error-output*)))
-       (unwind-protect
-            (handler-case
-                (uiop:wait-process p)
-              (stream-error (c)
-                (describe c)
-                (describe (slot-value c 'stream))))
-         (iter (while (uiop:process-alive-p p))
-            (uiop:terminate-process p)
-            (sleep 1)))))))
+  "returns a string, signal errors for non-0 return code.
+This is only for the 'light' routines as the process may not be terminated properly."
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output '(:string :stripped t)
+                    :error-output *error-output*))
 
 (defun cmd*/s (command &rest format-args)
-  "returns a string, ignores error status"
-  (string-trim
-   '(#\Space #\Newline #\Linefeed #\Rubout #\Tab)
-   (with-output-to-string (s)
-     (let ((p (uiop:launch-program (apply #'format nil command format-args)
-                                   :output s
-                                   :error-output *error-output*
-                                   :ignore-error-status t)))
-       (unwind-protect
-            (handler-case
-                (uiop:wait-process p)
-              (stream-error (c)
-                (describe c)
-                (describe (slot-value c 'stream))))
-         (iter (while (uiop:process-alive-p p))
-            (uiop:terminate-process p)
-            (sleep 1)))))))
+  "returns a string, ignores error status.
+This is only for the 'light' routines as the process may not be terminated properly."
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output '(:string :stripped t)
+                    :error-output *error-output*
+                    :ignore-error-status t))
 
 (defun rel (directory)
   ;; When several processes run in parallel, a hook inserted by quicklisp has a
