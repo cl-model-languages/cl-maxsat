@@ -76,7 +76,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                    :output s
                                    :error-output *error-output*)))
        (unwind-protect
-            (uiop:wait-process p)
+            (handler-case
+                (uiop:wait-process p)
+              (stream-error (c)
+                (describe c)
+                (describe (slot-value c 'stream))))
          (iter (while (uiop:process-alive-p p))
             (uiop:terminate-process p)
             (sleep 1)))))))
@@ -91,7 +95,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
                                    :error-output *error-output*
                                    :ignore-error-status t)))
        (unwind-protect
-            (uiop:wait-process p)
+            (handler-case
+                (uiop:wait-process p)
+              (stream-error (c)
+                (describe c)
+                (describe (slot-value c 'stream))))
          (iter (while (uiop:process-alive-p p))
             (uiop:terminate-process p)
             (sleep 1)))))))
