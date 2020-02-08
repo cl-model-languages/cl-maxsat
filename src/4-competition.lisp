@@ -46,6 +46,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun cmd (command &rest format-args)
   "returns a status code, signal errors for non-0 return code"
+  ;; Using launch-program when possible because run-program does not pipe the output real-time
   #-asdf3.2
   (uiop:run-program (apply #'format nil command format-args)
                     :output *standard-output*
@@ -62,6 +63,7 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun cmd* (command &rest format-args)
   "returns a status code, ignores error status"
+  ;; Using launch-program when possible because run-program does not pipe the output real-time
   #-asdf3.2
   (uiop:run-program (apply #'format nil command format-args)
                     :output *standard-output*
