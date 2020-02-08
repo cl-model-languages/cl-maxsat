@@ -46,6 +46,11 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun cmd (command &rest format-args)
   "returns a status code, signal errors for non-0 return code"
+  #-asdf3.2
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output *standard-output*
+                    :error-output *error-output*)
+  #+asdf3.2
   (let ((p (uiop:launch-program (apply #'format nil command format-args)
                                 :output *standard-output*
                                 :error-output *error-output*)))
@@ -57,6 +62,12 @@ CL-MAXSAT.  If not, see <http://www.gnu.org/licenses/>.
 
 (defun cmd* (command &rest format-args)
   "returns a status code, ignores error status"
+  #-asdf3.2
+  (uiop:run-program (apply #'format nil command format-args)
+                    :output *standard-output*
+                    :error-output *error-output*
+                    :ignore-error-status t)
+  #+asdf3.2
   (let ((p (uiop:launch-program (apply #'format nil command format-args)
                                 :output *standard-output*
                                 :error-output *error-output*
