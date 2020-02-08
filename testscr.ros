@@ -10,7 +10,7 @@ exec ros -Q -- $0 "$@"
   (declare (ignorable argv))
   (uiop:quit (if (handler-case
                      (progn
-                       (asdf:load-system :cl-maxsat.test)
+                       (ql:quickload :cl-maxsat.test)
                        (eval (read-from-string "(5am:run! :cl-maxsat)")))
                    (serious-condition (c)
                      (describe c)
